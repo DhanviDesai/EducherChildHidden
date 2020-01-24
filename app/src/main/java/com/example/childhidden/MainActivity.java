@@ -23,10 +23,17 @@ import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.childhidden.Services.ChildAppPermissions;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -56,6 +63,20 @@ public class MainActivity extends AppCompatActivity {
         PackageManager p = getPackageManager();
         ComponentName componentName = new ComponentName(this, com.example.childhidden.MainActivity.class); // activity which is first time open in manifiest file which is declare as <category android:name="android.intent.category.LAUNCHER" />
         p.setComponentEnabledSetting(componentName,PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+
+
+
+
+
+
+
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.i("Here in on stop","herer");
+        Log.i("Unregister","ReceiverGoneHere");
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -117,10 +138,45 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
 
             Boolean value = intent.getBooleanExtra("Status",true);
+            String parent_key = intent.getStringExtra("ParentId");
+            String childId = intent.getStringExtra("ChildId");
             Log.i("Status",String.valueOf(value));
+            Log.i("ParentId",parent_key);
+            Log.i("ChildId",childId);
+
             if(!value){
-                dialog.show();
+                DatabaseReference reference = FirebaseDatabase.getInstance().getReference().child(parent_key)
+                        .child(childId);
+                reference.child("HiddenLock").setValue(true);
+                reference.addChildEventListener(new ChildEventListener() {
+                    @Override
+                    public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
+                        Log.i("Here","AddedChild");
+                    }
+
+                    @Override
+                    public void onChildChanged(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
+                        Log.i("Here","ChildChanged");
+
+                    }
+
+                    @Override
+                    public void onChildRemoved(@NonNull DataSnapshot dataSnapshot) {
+
+                    }
+
+                    @Override
+                    public void onChildMoved(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
+
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                    }
+                });
             }
+
 
         }
     }
