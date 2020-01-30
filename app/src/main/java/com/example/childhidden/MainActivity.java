@@ -29,6 +29,7 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.childhidden.Services.ChildAppPermissions;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -40,6 +41,8 @@ public class MainActivity extends AppCompatActivity {
     private BootReceiver br;
     public static final int REQUEST_CODE=11;
     private Dialog dialog;
+    public static final String APPS = "apps";
+
     Receiver r;
 
     @Override
@@ -134,6 +137,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public class Receiver extends BroadcastReceiver{
+        private String phoneScreen  = null;
+        private String systemUI = null;
         @Override
         public void onReceive(Context context, Intent intent) {
 
@@ -144,19 +149,24 @@ public class MainActivity extends AppCompatActivity {
             Log.i("ParentId",parent_key);
             Log.i("ChildId",childId);
 
-            if(!value){
+            if(!value) {
                 DatabaseReference reference = FirebaseDatabase.getInstance().getReference().child(parent_key)
-                        .child(childId);
-                reference.child("HiddenLock").setValue(true);
+                        .child(childId).child(APPS);
                 reference.addChildEventListener(new ChildEventListener() {
                     @Override
                     public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
-                        Log.i("Here","AddedChild");
+                        String name = dataSnapshot.child("name").getValue().toString();
+                        if (name.equals("Phone Screen")) {
+                            phoneScreen = dataSnapshot.child("packageName").getValue().toString().replace('.', '_');
+                        }
+                        if (name.equals("System UI")) {
+                            systemUI = dataSnapshot.child("packageName").getValue().toString().replace('.', '_');
+                        }
                     }
 
                     @Override
                     public void onChildChanged(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
-                        Log.i("Here","ChildChanged");
+                        Log.i("Here", "ChildChanged");
 
                     }
 
@@ -175,6 +185,23 @@ public class MainActivity extends AppCompatActivity {
 
                     }
                 });
+
+                DatabaseReference reference1 = FirebaseDatabase.getInstance().getReference()
+                        .child(parent_key).child(childId).child(APPS);
+                reference1.child(phoneScreen).child("locked").setValue(true).addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Log.i("Lock", "Done");
+                    }
+                });
+                if (systemUI != null) {
+                    reference1.child(systemUI).child("locked").setValue(true).addOnSuccessListener(new OnSuccessListener<Void>() {
+                        @Override
+                        public void onSuccess(Void aVoid) {
+                            Log.i("Lock Screen", "Done");
+                        }
+                    });
+                }
             }
 
 
