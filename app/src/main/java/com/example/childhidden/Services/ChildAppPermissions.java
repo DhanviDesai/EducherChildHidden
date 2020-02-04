@@ -26,9 +26,7 @@ public class ChildAppPermissions extends Service {
         super.onCreate();
         Log.i("Start","Here");
 
-
-
-
+        checkPermissions();
 
     }
 

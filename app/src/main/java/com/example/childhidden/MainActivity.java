@@ -16,6 +16,7 @@ import android.provider.Settings;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
@@ -27,8 +28,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
 
 import com.example.childhidden.Services.ChildAppPermissions;
+import com.example.childhidden.Services.ForegroundService;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
@@ -37,6 +40,10 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 public class MainActivity extends AppCompatActivity {
+
+
+    public static String parent_key=null;
+    public static String child_id=null;
 
     private BootReceiver br;
     public static final int REQUEST_CODE=11;
@@ -61,19 +68,18 @@ public class MainActivity extends AppCompatActivity {
             checkDrawOverlayPermission();
         }
 
-        initDialoge();
+      //  initDialoge();
 
         PackageManager p = getPackageManager();
         ComponentName componentName = new ComponentName(this, com.example.childhidden.MainActivity.class); // activity which is first time open in manifiest file which is declare as <category android:name="android.intent.category.LAUNCHER" />
         p.setComponentEnabledSetting(componentName,PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
 
 
-
-
-
+        //startService(new Intent(this, ForegroundService.class));
 
 
     }
+
 
     @Override
     protected void onStop() {
@@ -137,21 +143,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public class Receiver extends BroadcastReceiver{
-        private String phoneScreen  = null;
+        private  String phoneScreen  = null;
         private String systemUI = null;
+        private boolean wentThrough=false;
         @Override
         public void onReceive(Context context, Intent intent) {
 
             Boolean value = intent.getBooleanExtra("Status",true);
-            String parent_key = intent.getStringExtra("ParentId");
-            String childId = intent.getStringExtra("ChildId");
+             parent_key = intent.getStringExtra("ParentId");
+             child_id = intent.getStringExtra("ChildId");
             Log.i("Status",String.valueOf(value));
             Log.i("ParentId",parent_key);
-            Log.i("ChildId",childId);
-
-            if(!value) {
+            Log.i("ChildId",child_id);
+            if(!wentThrough){
                 DatabaseReference reference = FirebaseDatabase.getInstance().getReference().child(parent_key)
-                        .child(childId).child(APPS);
+                        .child(child_id).child(APPS);
                 reference.addChildEventListener(new ChildEventListener() {
                     @Override
                     public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
@@ -185,22 +191,30 @@ public class MainActivity extends AppCompatActivity {
 
                     }
                 });
+                wentThrough = true;
 
-                DatabaseReference reference1 = FirebaseDatabase.getInstance().getReference()
-                        .child(parent_key).child(childId).child(APPS);
-                reference1.child(phoneScreen).child("locked").setValue(true).addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Log.i("Lock", "Done");
-                    }
-                });
-                if (systemUI != null) {
-                    reference1.child(systemUI).child("locked").setValue(true).addOnSuccessListener(new OnSuccessListener<Void>() {
+            }
+
+            if(!value) {
+
+                if (wentThrough) {
+                    DatabaseReference reference1 = FirebaseDatabase.getInstance().getReference()
+                            .child(parent_key).child(child_id).child(APPS);
+                    Log.i("PhoneScreen", phoneScreen);
+                    reference1.child(phoneScreen).child("locked").setValue(true).addOnSuccessListener(new OnSuccessListener<Void>() {
                         @Override
                         public void onSuccess(Void aVoid) {
-                            Log.i("Lock Screen", "Done");
+                            Log.i("Lock", "Done");
                         }
                     });
+                    if (systemUI != null) {
+                        reference1.child(systemUI).child("locked").setValue(true).addOnSuccessListener(new OnSuccessListener<Void>() {
+                            @Override
+                            public void onSuccess(Void aVoid) {
+                                Log.i("Lock Screen", "Done");
+                            }
+                        });
+                    }
                 }
             }
 
